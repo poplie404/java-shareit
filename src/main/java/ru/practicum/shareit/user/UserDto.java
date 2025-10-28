@@ -1,4 +1,4 @@
-package ru.practicum.user;
+package ru.practicum.shareit.user;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;

@@ -1,4 +1,4 @@
-package ru.practicum.item;
+package ru.practicum.shareit.item;
 
 public class ItemMapper {
     public static ItemDto toItemDto(Item item) {
