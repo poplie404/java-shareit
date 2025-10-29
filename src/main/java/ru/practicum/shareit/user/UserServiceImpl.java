@@ -31,6 +31,13 @@ class UserServiceImpl implements UserService {
 
     @Override
     public UserDto createUser(UserDto dto) {
+        boolean emailExists = users.values().stream()
+                .anyMatch(u -> u.getEmail().equalsIgnoreCase(dto.getEmail()));
+
+        if (emailExists) {
+            throw new IllegalStateException("Пользователь с таким email уже существует: " + dto.getEmail());
+        }
+
         long id = idGenerator.incrementAndGet();
         User user = UserMapper.toUser(dto);
         user.setId(id);
@@ -45,12 +52,20 @@ class UserServiceImpl implements UserService {
             throw new NoSuchElementException("Пользователь с id " + id + " не найден");
         }
 
-        // частичное обновление
+        if (dto.getEmail() != null) {
+            boolean emailInUse = users.values().stream()
+                    .anyMatch(u -> !u.getId().equals(id) && u.getEmail().equalsIgnoreCase(dto.getEmail()));
+            if (emailInUse) {
+                throw new IllegalStateException("Пользователь с таким email уже существует: " + dto.getEmail());
+            }
+            existing.setEmail(dto.getEmail());
+        }
+
         if (dto.getName() != null) existing.setName(dto.getName());
-        if (dto.getEmail() != null) existing.setEmail(dto.getEmail());
 
         return UserMapper.toUserDto(existing);
     }
+
 
     @Override
     public void deleteUser(Long id) {

@@ -2,6 +2,8 @@ package ru.practicum.shareit.item;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import ru.practicum.shareit.exception.ForbiddenException;
+import ru.practicum.shareit.user.UserService;
 
 import java.util.*;
 import java.util.concurrent.atomic.AtomicLong;
@@ -10,16 +12,25 @@ import java.util.concurrent.atomic.AtomicLong;
 @RequiredArgsConstructor
 public class ItemServiceImpl implements ItemService {
 
+    private final UserService userService; // нужно, чтобы проверять существование пользователя
     private final Map<Long, Item> items = new HashMap<>();
     private final AtomicLong idGenerator = new AtomicLong(0);
 
     @Override
     public Item createItem(ItemDto dto, Long ownerId) {
+        try {
+            userService.getUserById(ownerId);
+        } catch (NoSuchElementException e) {
+            throw new NoSuchElementException("Пользователь с id " + ownerId + " не найден");
+        }
+
         Long id = idGenerator.incrementAndGet();
         dto.setId(id);
         dto.setUserId(ownerId);
+
         Item item = ItemMapper.toItem(dto);
         items.put(id, item);
+
         return item;
     }
 
@@ -30,7 +41,7 @@ public class ItemServiceImpl implements ItemService {
             throw new NoSuchElementException("Вещь с id " + itemId + " не найдена");
         }
         if (!Objects.equals(existing.getUserId(), ownerId)) {
-            throw new IllegalStateException("Редактировать вещь может только владелец");
+            throw new ForbiddenException("Редактировать вещь может только владелец");
         }
 
         if (dto.getName() != null) existing.setName(dto.getName());
