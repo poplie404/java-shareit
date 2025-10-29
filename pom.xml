@@ -13,6 +13,7 @@
 
     <groupId>ru.yandex.practicum</groupId>
     <artifactId>shareit</artifactId>
+    <!-- Изменил версию назад -->
     <version>0.0.1-SNAPSHOT</version>
 
     <dependencies>
