@@ -6,23 +6,20 @@ import ru.practicum.shareit.exception.ForbiddenException;
 import ru.practicum.shareit.user.UserService;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
 @Service
 @RequiredArgsConstructor
 public class ItemServiceImpl implements ItemService {
 
-    private final UserService userService; // нужно, чтобы проверять существование пользователя
-    private final Map<Long, Item> items = new HashMap<>();
+    private final UserService userService;
+    private final Map<Long, Item> items = new ConcurrentHashMap<>();
     private final AtomicLong idGenerator = new AtomicLong(0);
 
     @Override
     public Item createItem(ItemDto dto, Long ownerId) {
-        try {
-            userService.getUserById(ownerId);
-        } catch (NoSuchElementException e) {
-            throw new NoSuchElementException("Пользователь с id " + ownerId + " не найден");
-        }
+        userService.getUserById(ownerId);
 
         Long id = idGenerator.incrementAndGet();
         dto.setId(id);
