@@ -9,7 +9,6 @@ import ru.practicum.shareit.item.comment.CommentRepository;
 import ru.practicum.shareit.user.UserRepository;
 import ru.practicum.shareit.user.UserService;
 
-import java.nio.file.AccessDeniedException;
 import java.util.Collections;
 import java.util.List;
 import java.util.NoSuchElementException;
