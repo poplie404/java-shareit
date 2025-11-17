@@ -1,12 +1,25 @@
 package ru.practicum.shareit.item;
 
+import jakarta.persistence.*;
 import lombok.Data;
 
 @Data
+@Entity
+@Table(name = "items")
 public class Item {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @Column(nullable = false)
     private String name;
+
     private String description;
+
+    @Column(nullable = false)
     private Boolean available;
-    private Long userId;
+
+    @Column(name = "owner_id", nullable = false)
+    private Long ownerId;
 }
