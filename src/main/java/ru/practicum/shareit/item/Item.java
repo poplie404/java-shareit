@@ -2,6 +2,7 @@ package ru.practicum.shareit.item;
 
 import jakarta.persistence.*;
 import lombok.Data;
+import ru.practicum.shareit.user.User;
 
 @Data
 @Entity
@@ -20,6 +21,7 @@ public class Item {
     @Column(nullable = false)
     private Boolean available;
 
-    @Column(name = "owner_id", nullable = false)
-    private Long ownerId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "owner_id", nullable = false)
+    private User owner;
 }

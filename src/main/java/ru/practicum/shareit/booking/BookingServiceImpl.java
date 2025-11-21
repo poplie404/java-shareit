@@ -1,11 +1,13 @@
 package ru.practicum.shareit.booking;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import ru.practicum.shareit.exception.ForbiddenException;
 import ru.practicum.shareit.item.Item;
 import ru.practicum.shareit.item.ItemMapper;
 import ru.practicum.shareit.item.ItemRepository;
+import ru.practicum.shareit.user.User;
 import ru.practicum.shareit.user.UserDto;
 import ru.practicum.shareit.user.UserService;
 
@@ -24,56 +26,41 @@ public class BookingServiceImpl implements BookingService {
     @Override
     public BookingResponseDto createBooking(BookingRequestDto dto, Long userId) {
 
-        UserDto user = userService.getUserById(userId);
+        UserDto userDto = userService.getUserById(userId);
+        User booker = userService.getUserEntity(userId);
 
         Item item = itemRepository.findById(dto.getItemId())
                 .orElseThrow(() -> new NoSuchElementException("Вещь не найдена"));
 
-        if (!item.getAvailable()) {
-            throw new IllegalArgumentException("Вещь недоступна для бронирования");
-        }
+        validateBookingRequest(dto, item, userId);
 
-        if (item.getOwnerId().equals(userId)) {
-            throw new IllegalArgumentException("Нельзя бронировать свою вещь");
-        }
-
-        if (dto.getStart() == null || dto.getEnd() == null) {
-            throw new IllegalArgumentException("Дата начала и окончания обязательны");
-        }
-        if (!dto.getStart().isBefore(dto.getEnd())) {
-            throw new IllegalArgumentException("Дата начала должна быть раньше даты окончания");
-        }
-        if (dto.getStart().isBefore(LocalDateTime.now())) {
-            throw new IllegalArgumentException("Дата начала не может быть в прошлом");
-        }
-
-        Booking booking = BookingMapper.toBooking(dto, userId);
-        booking.setStatus(BookingStatus.WAITING);
+        Booking booking = BookingMapper.toBooking(dto, item, booker);
 
         Booking saved = bookingRepository.save(booking);
 
         return BookingMapper.toResponseDto(
                 saved,
                 ItemMapper.toItemDto(item),
-                user
+                userDto
         );
     }
+
+
 
     @Override
     public BookingResponseDto approveBooking(Long bookingId, Long ownerId, boolean approved) {
 
         Booking booking = bookingRepository.findById(bookingId)
-                .orElseThrow(() -> new NoSuchElementException("Бронирование не найдено"));
+                .orElseThrow(() -> new NoSuchElementException("Бронь не найдена"));
 
-        Item item = itemRepository.findById(booking.getItemId())
-                .orElseThrow();
+        Item item = booking.getItem();
 
-        if (!item.getOwnerId().equals(ownerId)) {
-            throw new ForbiddenException("Подтверждать бронирование может только владелец вещи");
+        if (!item.getOwner().getId().equals(ownerId)) {
+            throw new ForbiddenException("Подтверждать бронирование может только владелец");
         }
 
         if (booking.getStatus() != BookingStatus.WAITING) {
-            throw new IllegalArgumentException("Бронирование уже подтверждено или отклонено");
+            throw new IllegalArgumentException("Бронирование уже обработано");
         }
 
         booking.setStatus(approved ? BookingStatus.APPROVED : BookingStatus.REJECTED);
@@ -83,7 +70,7 @@ public class BookingServiceImpl implements BookingService {
         return BookingMapper.toResponseDto(
                 saved,
                 ItemMapper.toItemDto(item),
-                userService.getUserById(saved.getBookerId())
+                userService.getUserById(saved.getBooker().getId())
         );
     }
 
@@ -92,77 +79,110 @@ public class BookingServiceImpl implements BookingService {
     public BookingResponseDto getBooking(Long bookingId, Long userId) {
 
         Booking booking = bookingRepository.findById(bookingId)
-                .orElseThrow(() -> new NoSuchElementException("Бронирование не найдено"));
+                .orElseThrow(() -> new NoSuchElementException("Бронь не найдена"));
 
-        Item item = itemRepository.findById(booking.getItemId())
-                .orElseThrow();
+        Item item = booking.getItem();
 
-        if (!booking.getBookerId().equals(userId)
-                && !item.getOwnerId().equals(userId)) {
-            throw new IllegalStateException("Нет доступа к этому бронированию");
+        if (!booking.getBooker().getId().equals(userId)
+                && !item.getOwner().getId().equals(userId)) {
+            throw new IllegalStateException("Нет доступа");
         }
 
         return BookingMapper.toResponseDto(
                 booking,
                 ItemMapper.toItemDto(item),
-                userService.getUserById(booking.getBookerId())
+                userService.getUserById(booking.getBooker().getId())
         );
     }
+
 
     @Override
     public List<BookingResponseDto> getBookingsByUser(Long userId, String state) {
 
         userService.getUserById(userId);
+        LocalDateTime now = LocalDateTime.now();
 
-        List<Booking> list = bookingRepository.findAllByBookerIdOrderByStartDesc(userId);
+        List<Booking> list = switch (state.toUpperCase()) {
+            case "ALL"      -> bookingRepository.findAllByBookerIdOrderByStartDesc(userId);
+            case "CURRENT"  -> bookingRepository
+                    .findAllByBookerIdAndStartBeforeAndEndAfterOrderByStartDesc(userId, now, now);
+            case "PAST"     -> bookingRepository
+                    .findAllByBookerIdAndEndBeforeOrderByStartDesc(userId, now);
+            case "FUTURE"   -> bookingRepository
+                    .findAllByBookerIdAndStartAfterOrderByStartDesc(userId, now);
+            case "WAITING"  -> bookingRepository
+                    .findAllByBookerIdAndStatusOrderByStartDesc(userId, BookingStatus.WAITING);
+            case "REJECTED" -> bookingRepository
+                    .findAllByBookerIdAndStatusOrderByStartDesc(userId, BookingStatus.REJECTED);
+            default -> throw new IllegalArgumentException("Unknown state: " + state);
+        };
 
-        return filterByState(list, state).stream()
+        return list.stream()
                 .map(b -> BookingMapper.toResponseDto(
                         b,
-                        ItemMapper.toItemDto(itemRepository.findById(b.getItemId()).orElseThrow()),
-                        userService.getUserById(b.getBookerId())
+                        ItemMapper.toItemDto(itemRepository.findById(b.getItem().getId()).orElseThrow()),
+                        userService.getUserById(b.getBooker().getId())
                 ))
                 .toList();
     }
+
+
 
     @Override
     public List<BookingResponseDto> getBookingsByOwner(Long ownerId, String state) {
 
         userService.getUserById(ownerId);
+        LocalDateTime now = LocalDateTime.now();
 
-        List<Booking> list = bookingRepository.findAllByOwnerId(ownerId);
+        List<Booking> list = switch (state.toUpperCase()) {
+            case "ALL"      -> bookingRepository.findAllByOwnerId(ownerId);
+            case "CURRENT"  -> bookingRepository.findCurrentByOwner(ownerId, now);
+            case "PAST"     -> bookingRepository.findPastByOwner(ownerId, now);
+            case "FUTURE"   -> bookingRepository.findFutureByOwner(ownerId, now);
+            case "WAITING"  -> bookingRepository.findByOwnerAndStatus(ownerId, BookingStatus.WAITING);
+            case "REJECTED" -> bookingRepository.findByOwnerAndStatus(ownerId, BookingStatus.REJECTED);
+            default -> throw new IllegalArgumentException("Unknown state: " + state);
+        };
 
-        return filterByState(list, state).stream()
+        return list.stream()
                 .map(b -> BookingMapper.toResponseDto(
                         b,
-                        ItemMapper.toItemDto(itemRepository.findById(b.getItemId()).orElseThrow()),
-                        userService.getUserById(b.getBookerId())
+                        ItemMapper.toItemDto(itemRepository.findById(b.getItem().getId()).orElseThrow()),
+                        userService.getUserById(b.getBooker().getId())
                 ))
                 .toList();
     }
 
-    private List<Booking> filterByState(List<Booking> list, String state) {
+    private void validateBookingRequest(BookingRequestDto dto, Item item, Long userId) {
 
-        LocalDateTime now = LocalDateTime.now();
+        if (!item.getAvailable()) {
+            throw new IllegalArgumentException("Вещь недоступна для бронирования");
+        }
 
-        return switch (state.toUpperCase()) {
-            case "ALL"      -> list;
-            case "CURRENT"  -> list.stream()
-                    .filter(b -> b.getStart().isBefore(now) && b.getEnd().isAfter(now))
-                    .toList();
-            case "PAST"     -> list.stream()
-                    .filter(b -> b.getEnd().isBefore(now))
-                    .toList();
-            case "FUTURE"   -> list.stream()
-                    .filter(b -> b.getStart().isAfter(now))
-                    .toList();
-            case "WAITING"  -> list.stream()
-                    .filter(b -> b.getStatus() == BookingStatus.WAITING)
-                    .toList();
-            case "REJECTED" -> list.stream()
-                    .filter(b -> b.getStatus() == BookingStatus.REJECTED)
-                    .toList();
-            default -> throw new IllegalArgumentException("Unknown state: " + state);
-        };
+        if (item.getOwner().getId().equals(userId)) {
+            throw new IllegalArgumentException("Нельзя бронировать свою вещь");
+        }
+
+        if (dto.getStart() == null || dto.getEnd() == null) {
+            throw new IllegalArgumentException("Дата начала и окончания обязательны");
+        }
+
+        if (!dto.getStart().isBefore(dto.getEnd())) {
+            throw new IllegalArgumentException("Дата начала должна быть раньше окончания");
+        }
+
+        if (dto.getStart().isBefore(LocalDateTime.now())) {
+            throw new IllegalArgumentException("Дата начала не может быть в прошлом");
+        }
+    }
+
+    public Booking findLastBooking(Long itemId) {
+        List<Booking> list = bookingRepository.findLastBookingRaw(itemId, Pageable.ofSize(1));
+        return list.isEmpty() ? null : list.get(0);
+    }
+
+    public Booking findNextBooking(Long itemId) {
+        List<Booking> list = bookingRepository.findNextBookingRaw(itemId, Pageable.ofSize(1));
+        return list.isEmpty() ? null : list.get(0);
     }
 }

@@ -33,22 +33,36 @@ public class ItemController {
     }
 
     @GetMapping("/{itemId}")
-    public ItemDto getItemById(@PathVariable Long itemId) {
-        ItemDto item = itemService.getItemById(itemId);
-        return item;
+    public ItemDto getItemById(
+            @PathVariable Long itemId,
+            @RequestHeader("X-Sharer-User-Id") Long userId
+    ) {
+        return itemService.getItemById(itemId, userId);
     }
+
 
 
     @GetMapping
-    public Collection<Item> getItemsByOwner(@RequestHeader("X-Sharer-User-Id") Long ownerId) {
+    public Collection<ItemDto> getItemsByOwner(
+            @RequestHeader("X-Sharer-User-Id") Long ownerId
+    ) {
         List<Item> items = itemService.getItemsByOwner(ownerId);
-        log.info("Получен список из {} вещей владельца ID={}", items.size(), ownerId);
-        return items;
+        return items.stream()
+                .map(ItemMapper::toItemDto)
+                .toList();
     }
 
+
+
     @GetMapping("/search")
-    public List<Item> searchItems(@RequestParam String text) {
-        log.info("Поиск вещей по запросу: '{}'", text);
-        return itemService.search(text);
+    public List<ItemDto> search(
+            @RequestParam String text
+    ) {
+        List<Item> items = itemService.search(text);
+
+        return items.stream()
+                .map(ItemMapper::toItemDto)
+                .toList();
     }
+
 }

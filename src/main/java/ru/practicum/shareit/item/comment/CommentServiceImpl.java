@@ -40,26 +40,21 @@ public class CommentServiceImpl implements CommentService {
         }
 
         Comment comment = CommentMapper.toComment(dto);
-        comment.setAuthorId(userId);
-        comment.setItemId(itemId);
+        comment.setAuthor(user);
+        comment.setItem(item);
         comment.setCreated(LocalDateTime.now());
 
         Comment saved = commentRepository.save(comment);
 
-        return CommentMapper.toCommentDto(saved, user.getName());
+        return CommentMapper.toCommentDto(saved);
     }
-
 
     @Override
     public List<CommentDto> getCommentsByItem(Long itemId) {
         List<Comment> comments = commentRepository.findAllByItemId(itemId);
 
         return comments.stream()
-                .map(c -> {
-                    User author = userRepository.findById(c.getAuthorId()).orElseThrow();
-                    return CommentMapper.toCommentDto(c, author.getName());
-                })
+                .map(CommentMapper::toCommentDto)
                 .toList();
     }
 }
-

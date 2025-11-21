@@ -80,4 +80,11 @@ class UserServiceImpl implements UserService {
         }
         userRepository.deleteById(id);
     }
+
+    @Override
+    public User getUserEntity(Long id) {
+        return userRepository.findById(id)
+                .orElseThrow(() -> new NoSuchElementException("Пользователь не найден"));
+    }
+
 }

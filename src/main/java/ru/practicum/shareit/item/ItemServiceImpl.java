@@ -2,15 +2,20 @@ package ru.practicum.shareit.item;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import ru.practicum.shareit.booking.Booking;
+import ru.practicum.shareit.booking.BookingRepository;
+import ru.practicum.shareit.booking.BookingServiceImpl;
 import ru.practicum.shareit.exception.ForbiddenException;
 import ru.practicum.shareit.item.comment.CommentDto;
 import ru.practicum.shareit.item.comment.CommentMapper;
 import ru.practicum.shareit.item.comment.CommentRepository;
 import ru.practicum.shareit.user.UserRepository;
 import ru.practicum.shareit.user.UserService;
+import ru.practicum.shareit.user.User;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
 
 @Service
@@ -21,14 +26,17 @@ public class ItemServiceImpl implements ItemService {
     private final ItemRepository itemRepository;
     private final CommentRepository commentRepository;
     private final UserRepository userRepository;
+    private final BookingRepository bookingRepository;
+    private final BookingServiceImpl bookingService;
 
     @Override
     public Item createItem(ItemDto dto, Long ownerId) {
 
-        userService.getUserById(ownerId);
+        User owner = userRepository.findById(ownerId)
+                .orElseThrow(() -> new NoSuchElementException("Пользователь не найден"));
 
         Item item = ItemMapper.toItem(dto);
-        item.setOwnerId(ownerId);
+        item.setOwner(owner);
 
         return itemRepository.save(item);
     }
@@ -42,44 +50,57 @@ public class ItemServiceImpl implements ItemService {
                 .orElseThrow(() ->
                         new NoSuchElementException("Вещь с id " + itemId + " не найдена"));
 
-        if (!existing.getOwnerId().equals(ownerId)) {
+        if (!existing.getOwner().getId().equals(ownerId)) {
             throw new ForbiddenException("Редактировать вещь может только её владелец");
         }
 
-        if (dto.getName() != null) {
-            existing.setName(dto.getName());
-        }
-        if (dto.getDescription() != null) {
-            existing.setDescription(dto.getDescription());
-        }
-        if (dto.getAvailable() != null) {
-            existing.setAvailable(dto.getAvailable());
-        }
+        if (dto.getName() != null) existing.setName(dto.getName());
+        if (dto.getDescription() != null) existing.setDescription(dto.getDescription());
+        if (dto.getAvailable() != null) existing.setAvailable(dto.getAvailable());
 
         return itemRepository.save(existing);
     }
 
     @Override
-    public ItemDto getItemById(Long itemId) {
+    public ItemDto getItemById(Long itemId, Long userId) {
+
         Item item = itemRepository.findById(itemId)
                 .orElseThrow(() -> new NoSuchElementException("Вещь не найдена"));
 
         List<CommentDto> comments = commentRepository.findAllByItemId(itemId).stream()
-                .map(c -> CommentMapper.toCommentDto(
-                        c,
-                        userRepository.findById(c.getAuthorId()).orElseThrow().getName()
-                ))
+                .map(CommentMapper::toCommentDto)
                 .toList();
 
-        ItemDto dto = ItemMapper.toItemDto(item);
-        dto.setComments(comments);
+        Object lastBooking = null;
+        Object nextBooking = null;
 
-        dto.setLastBooking(null);
-        dto.setNextBooking(null);
+        if (item.getOwner().getId().equals(userId)) {
 
-        return dto;
+            Booking last = bookingService.findLastBooking(itemId);
+            Booking next = bookingService.findNextBooking(itemId);
+
+            if (last != null) {
+                lastBooking = Map.of(
+                        "id", last.getId(),
+                        "bookerId", last.getBooker().getId()
+                );
+            }
+
+            if (next != null) {
+                nextBooking = Map.of(
+                        "id", next.getId(),
+                        "bookerId", next.getBooker().getId()
+                );
+            }
+        }
+
+        return ItemMapper.toItemDto(
+                item,
+                lastBooking,
+                nextBooking,
+                comments
+        );
     }
-
 
 
     @Override
@@ -95,3 +116,5 @@ public class ItemServiceImpl implements ItemService {
         return itemRepository.search(text.toLowerCase());
     }
 }
+
+
