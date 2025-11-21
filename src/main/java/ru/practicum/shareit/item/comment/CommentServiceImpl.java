@@ -46,7 +46,10 @@ public class CommentServiceImpl implements CommentService {
 
         Comment saved = commentRepository.save(comment);
 
+        saved.setAuthor(user);
+
         return CommentMapper.toCommentDto(saved);
+
     }
 
     @Override
