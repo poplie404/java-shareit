@@ -37,4 +37,17 @@ class ItemDtoTest {
         assertThat(itemDto.getAvailable()).isTrue();
         assertThat(itemDto.getRequestId()).isEqualTo(10L);
     }
+
+    @Test
+    void serializeItemDtoWithNullsSuccess() throws Exception {
+        ItemDto dto = new ItemDto();
+        dto.setId(1L);
+        dto.setName(null);  // null поля
+        dto.setLastBooking(null);
+
+        String json = objectMapper.writeValueAsString(dto);
+        assertThat(json).contains("\"id\":1");
+        assertThat(json).contains("\"name\":null");  // проверяем null сериализацию
+    }
+
 }

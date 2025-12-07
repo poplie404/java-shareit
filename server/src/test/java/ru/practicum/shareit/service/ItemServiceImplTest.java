@@ -178,6 +178,25 @@ class ItemServiceImplTest {
         assertTrue(result.isEmpty());
     }
 
+    @Test
+    void searchNullReturnsEmpty() {
+        List<ItemDto> result = itemService.search(null);
+        assertTrue(result.isEmpty());
+    }
+
+    @Test
+    void searchEmptyStringReturnsEmpty() {
+        List<ItemDto> result = itemService.search("");
+        assertTrue(result.isEmpty());
+    }
+
+    @Test
+    void searchWhitespaceReturnsEmpty() {
+        List<ItemDto> result = itemService.search("   ");
+        assertTrue(result.isEmpty());
+    }
+
+
     private User createUser(String email, String name) {
         User user = new User();
         user.setEmail(email);

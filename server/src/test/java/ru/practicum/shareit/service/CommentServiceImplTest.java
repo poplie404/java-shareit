@@ -148,6 +148,16 @@ class CommentServiceImplTest {
         assertEquals(booker.getName(), comments.get(0).getAuthorName());
     }
 
+    @Test
+    void getCommentsByItemReturnsEmptyList() {
+        User owner = createUser("owner@test.com", "Owner");
+        Item item = createItem(owner, "Item", true);
+
+        List<CommentDto> comments = commentService.getCommentsByItem(item.getId());
+        assertTrue(comments.isEmpty());
+    }
+
+
     private User createUser(String email, String name) {
         User u = new User();
         u.setEmail(email);

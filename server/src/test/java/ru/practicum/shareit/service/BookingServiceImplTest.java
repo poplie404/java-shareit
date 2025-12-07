@@ -311,6 +311,20 @@ class BookingServiceImplTest {
                 () -> bookingService.approveBooking(booking.getId(), owner.getId(), false));
     }
 
+    @Test
+    void findLastBookingReturnsNullWhenNoBookings() {
+        Item item = createItem(createUser("owner@test.com", "Owner"), "Item", true);
+        Booking last = ((BookingServiceImpl) bookingService).findLastBooking(item.getId());
+        assertNull(last);
+    }
+
+    @Test
+    void findNextBookingReturnsNullWhenNoBookings() {
+        Item item = createItem(createUser("owner@test.com", "Owner"), "Item", true);
+        Booking next = ((BookingServiceImpl) bookingService).findNextBooking(item.getId());
+        assertNull(next);
+    }
+
     private User createUser(String email, String name) {
         User u = new User();
         u.setEmail(email);
