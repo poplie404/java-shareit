@@ -10,7 +10,6 @@ import ru.practicum.shareit.item.comment.CommentService;
 
 @TestConfiguration
 public class TestConfig {
-
     @Bean
     @Primary
     public ItemService itemService() {
