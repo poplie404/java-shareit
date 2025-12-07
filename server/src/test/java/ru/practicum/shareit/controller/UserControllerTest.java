@@ -90,7 +90,7 @@ class UserControllerTest {
         mockMvc.perform(delete("/users/1"))
                 .andExpect(status().isOk());
     }
-    // ✅ getUserById NotFound (НЕ покрыто!)
+
     @Test
     void getUserByIdNotFound() throws Exception {
         when(userService.getUserById(eq(999L)))
