@@ -196,6 +196,17 @@ class ItemServiceImplTest {
         assertTrue(result.isEmpty());
     }
 
+    @Test
+    void getItemByIdForNonOwner() {
+        User owner = createUser("owner@test.com", "Owner");
+        User other = createUser("other@test.com", "Other");
+        Item item = createItem(owner, "Item", true);
+
+        ItemDto dto = itemService.getItemById(item.getId(), other.getId());
+        assertNull(dto.getLastBooking());
+        assertNull(dto.getNextBooking());
+    }
+
 
     private User createUser(String email, String name) {
         User user = new User();
