@@ -325,6 +325,82 @@ class BookingServiceImplTest {
         assertNull(next);
     }
 
+    @Test
+    void getBookingsByOwnerAllState() {
+        User owner = createUser("owner@test.com", "Owner");
+        User booker = createUser("booker@test.com", "Booker");
+        Item item = createItem(owner, "Test Item", true);
+
+        BookingRequestDto dto = new BookingRequestDto();
+        dto.setItemId(item.getId());
+        dto.setStart(LocalDateTime.now().plusDays(1));
+        dto.setEnd(LocalDateTime.now().plusDays(2));
+        bookingService.createBooking(dto, booker.getId());
+
+        List<BookingResponseDto> bookings = bookingService.getBookingsByOwner(owner.getId(), "ALL", 0, 10);
+        assertEquals(1, bookings.size());
+    }
+
+    @Test
+    void getBookingsByOwnerWaitingState() {
+        User owner = createUser("owner-wait@test.com", "Owner");
+        User booker = createUser("booker-wait@test.com", "Booker");
+        Item item = createItem(owner, "Item", true);
+
+        BookingRequestDto dto = new BookingRequestDto();
+        dto.setItemId(item.getId());
+        dto.setStart(LocalDateTime.now().plusDays(1));
+        dto.setEnd(LocalDateTime.now().plusDays(2));
+        bookingService.createBooking(dto, booker.getId());  // WAITING
+
+        List<BookingResponseDto> bookings = bookingService.getBookingsByOwner(owner.getId(), "WAITING", 0, 10);
+        assertEquals(1, bookings.size());
+        assertEquals(BookingStatus.WAITING, bookings.get(0).getStatus());
+    }
+
+    @Test
+    void createBookingFailsOwnItem() {
+        User owner = createUser("owner@test.com", "Owner");
+        Item item = createItem(owner, "Own Item", true);
+
+        BookingRequestDto dto = new BookingRequestDto();
+        dto.setItemId(item.getId());
+        dto.setStart(LocalDateTime.now().plusDays(1));
+        dto.setEnd(LocalDateTime.now().plusDays(2));
+
+        assertThrows(IllegalArgumentException.class,
+                () -> bookingService.createBooking(dto, owner.getId()));  // свой item
+    }
+
+    @Test
+    void createBookingFailsNullDates() {
+        User owner = createUser("owner@test.com", "Owner");
+        User booker = createUser("booker@test.com", "Booker");
+        Item item = createItem(owner, "Item", true);
+
+        BookingRequestDto dto = new BookingRequestDto();
+        dto.setItemId(item.getId());
+
+        assertThrows(IllegalArgumentException.class,
+                () -> bookingService.createBooking(dto, booker.getId()));
+    }
+
+    @Test
+    void createBookingFailsEndBeforeStart() {
+        User owner = createUser("owner@test.com", "Owner");
+        User booker = createUser("booker@test.com", "Booker");
+        Item item = createItem(owner, "Item", true);
+
+        BookingRequestDto dto = new BookingRequestDto();
+        dto.setItemId(item.getId());
+        dto.setStart(LocalDateTime.now().plusDays(2));  // start > end
+        dto.setEnd(LocalDateTime.now().plusDays(1));
+
+        assertThrows(IllegalArgumentException.class,
+                () -> bookingService.createBooking(dto, booker.getId()));
+    }
+
+
     private User createUser(String email, String name) {
         User u = new User();
         u.setEmail(email);

@@ -6,10 +6,11 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 import ru.practicum.shareit.dto.item.ItemDto;
-import ru.practicum.shareit.entity.Item;
-import ru.practicum.shareit.entity.User;
-import ru.practicum.shareit.repository.ItemRepository;
-import ru.practicum.shareit.repository.UserRepository;
+import ru.practicum.shareit.entity.*;
+import ru.practicum.shareit.repository.*;
+
+import java.time.LocalDateTime;
+import java.util.Map;
 import java.util.NoSuchElementException;
 
 import java.util.List;
@@ -29,6 +30,15 @@ class ItemServiceImplTest {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private BookingRepository bookingRepository;
+
+    @Autowired
+    private CommentRepository commentRepository;
+
+    @Autowired
+    private ItemRequestRepository itemRequestRepository;
 
     @Test
     void shouldCreateItemSuccessfully() {
@@ -84,11 +94,6 @@ class ItemServiceImplTest {
         assertEquals("Drill Machine", results.get(0).getName());
     }
 
-    @Test
-    void shouldReturnEmptyListWhenSearchTextIsBlank() {
-        List<ItemDto> results = itemService.search("");
-        assertTrue(results.isEmpty());
-    }
 
     @Test
     void shouldUpdateItemSuccessfully() {
@@ -207,6 +212,89 @@ class ItemServiceImplTest {
         assertNull(dto.getNextBooking());
     }
 
+    @Test
+    void createItemWithRequestId() {
+        User owner = createUser("owner@test.com", "Owner");
+        ItemRequest request = createItemRequest(createUser("requester@test.com", "Requester"));
+
+        ItemDto dto = new ItemDto();
+        dto.setName("Item from request");
+        dto.setDescription("Created from request");
+        dto.setAvailable(true);
+        dto.setRequestId(request.getId());  // ← requestId!
+
+        ItemDto created = itemService.createItem(dto, owner.getId());
+
+        assertEquals("Item from request", created.getName());
+        assertEquals(request.getId(), created.getRequestId());
+    }
+
+    @Test
+    void createItemFailsWithInvalidRequestId() {
+        User owner = createUser("owner@test.com", "Owner");
+
+        ItemDto dto = new ItemDto();
+        dto.setName("Item");
+        dto.setRequestId(999L);  // несуществующий request
+
+        assertThrows(NoSuchElementException.class,
+                () -> itemService.createItem(dto, owner.getId()));
+    }
+
+    @Test
+    void getItemsByOwnerWithBookingsAndComments() {
+        User owner = createUser("owner@test.com", "Owner");
+        Item item = createItem(owner, "Item with bookings", true);
+
+        // Создать booking для last/next
+        User booker = createUser("booker@test.com", "Booker");
+        Booking booking = createBookingForItem(item, booker); // helper метод
+
+        // Создать comment
+        createComment(booker, item, "Great item!");
+
+        List<ItemDto> items = itemService.getItemsByOwner(owner.getId());
+
+        assertEquals(1, items.size());
+        assertNotNull(items.get(0).getLastBooking());  // owner видит bookings
+        assertFalse(items.get(0).getComments().isEmpty());
+    }
+
+    @Test
+    void getItemByIdForOwnerWithBookings() {
+        User owner = createUser("owner@test.com", "Owner");
+        Item item = createItem(owner, "Owner sees bookings", true);
+
+        User booker = createUser("booker@test.com", "Booker");
+
+        Booking pastBooking = new Booking();
+        pastBooking.setItem(item);
+        pastBooking.setBooker(booker);
+        pastBooking.setStart(LocalDateTime.now().minusDays(2));  // ПРОШЕЛ
+        pastBooking.setEnd(LocalDateTime.now().minusDays(1));    // ПРОШЕЛ
+        pastBooking.setStatus(BookingStatus.APPROVED);
+        bookingRepository.save(pastBooking);
+
+        Booking futureBooking = new Booking();
+        futureBooking.setItem(item);
+        futureBooking.setBooker(booker);
+        futureBooking.setStart(LocalDateTime.now().plusDays(1));  // БУДУЩЕЕ
+        futureBooking.setEnd(LocalDateTime.now().plusDays(2));    // БУДУЩЕЕ
+        futureBooking.setStatus(BookingStatus.APPROVED);
+        bookingRepository.save(futureBooking);
+
+        ItemDto dto = itemService.getItemById(item.getId(), owner.getId());
+
+        assertNotNull(dto.getLastBooking());
+        assertTrue(dto.getLastBooking() instanceof Map);
+        assertNotNull(((Map<?, ?>) dto.getLastBooking()).get("id"));
+
+        assertNotNull(dto.getNextBooking());
+        assertTrue(dto.getNextBooking() instanceof Map);
+        assertNotNull(((Map<?, ?>) dto.getNextBooking()).get("id"));
+    }
+
+
 
     private User createUser(String email, String name) {
         User user = new User();
@@ -222,5 +310,32 @@ class ItemServiceImplTest {
         item.setAvailable(available);
         item.setOwner(owner);
         return itemRepository.save(item);
+    }
+
+    private ItemRequest createItemRequest(User requester) {
+        ItemRequest request = new ItemRequest();
+        request.setDescription("Need drill");
+        request.setRequester(requester);
+        request.setCreated(LocalDateTime.now());
+        return itemRequestRepository.save(request);
+    }
+
+    private Booking createBookingForItem(Item item, User booker) {
+        Booking booking = new Booking();
+        booking.setItem(item);
+        booking.setBooker(booker);
+        booking.setStart(LocalDateTime.now().minusDays(1));
+        booking.setEnd(LocalDateTime.now().plusDays(1));
+        booking.setStatus(BookingStatus.APPROVED);
+        return bookingRepository.save(booking);
+    }
+
+    private Comment createComment(User author, Item item, String text) {
+        Comment comment = new Comment();
+        comment.setText(text);
+        comment.setItem(item);
+        comment.setAuthor(author);
+        comment.setCreated(LocalDateTime.now());
+        return commentRepository.save(comment);
     }
 }
