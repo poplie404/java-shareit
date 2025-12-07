@@ -46,17 +46,16 @@ class ItemRequestDtoTest {
 
     @Test
     void deserializeItemRequestDtoSuccess() throws Exception {
-        String json = """
-                {
-                  "id": 5,
-                  "description": "Need drill",
-                  "created": "2024-01-01T12:00:00",
-                  "items": [
-                    {"id": 10, "name": "Item 1"},
-                    {"id": 11, "name": "Item 2"}
-                  ]
-                }
-                """;
+        String json =
+                "{"
+                        + "\"id\":5,"
+                        + "\"description\":\"Need drill\","
+                        + "\"created\":\"2024-01-01T12:00:00\","
+                        + "\"items\":["
+                        + "{\"id\":10,\"name\":\"Item 1\"},"
+                        + "{\"id\":11,\"name\":\"Item 2\"}"
+                        + "]"
+                        + "}";
 
         ItemRequestDto dto = objectMapper.readValue(json, ItemRequestDto.class);
 

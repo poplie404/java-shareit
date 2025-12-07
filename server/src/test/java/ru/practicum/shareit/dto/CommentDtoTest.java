@@ -34,14 +34,13 @@ class CommentDtoTest {
 
     @Test
     void deserializeCommentDtoSuccess() throws Exception {
-        String json = """
-                {
-                  "id": 1,
-                  "text": "Test comment",
-                  "authorName": "Author Name",
-                  "created": "2024-01-01T10:00:00"
-                }
-                """;
+        String json =
+                "{"
+                        + "\"id\":1,"
+                        + "\"text\":\"Test comment\","
+                        + "\"authorName\":\"Author Name\","
+                        + "\"created\":\"2024-01-01T10:00:00\""
+                        + "}";
 
         CommentDto dto = objectMapper.readValue(json, CommentDto.class);
 
