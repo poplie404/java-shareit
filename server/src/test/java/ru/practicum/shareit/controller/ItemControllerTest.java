@@ -9,6 +9,7 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import ru.practicum.shareit.dto.item.ItemDto;
+import ru.practicum.shareit.exception.NotFoundException;
 import ru.practicum.shareit.service.CommentService;
 import ru.practicum.shareit.service.ItemService;
 
@@ -152,6 +153,17 @@ class ItemControllerTest {
                         .param("text", ""))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(0));
+    }
+
+    @Test
+    void getItemNotFound() throws Exception {
+        Mockito.when(itemService.getItemById(eq(999L), eq(1L)))
+                .thenThrow(new ru.practicum.shareit.exception.NotFoundException("Item not found"));
+
+        mockMvc.perform(get("/items/999")
+                        .header("X-Sharer-User-Id", 1L))
+                .andExpect(status().isNotFound())  // ✅ 404 вместо 400
+                .andExpect(jsonPath("$.error").value("Item not found"));
     }
 
 }
