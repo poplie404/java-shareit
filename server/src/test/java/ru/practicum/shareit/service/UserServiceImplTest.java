@@ -9,6 +9,8 @@ import ru.practicum.shareit.dto.user.UserDto;
 import ru.practicum.shareit.entity.User;
 import ru.practicum.shareit.repository.UserRepository;
 import java.util.List;
+import java.util.NoSuchElementException;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest
@@ -70,4 +72,41 @@ class UserServiceImplTest {
         user.setName(name);
         return userRepository.save(user);
     }
+
+    @Test
+    void createUserFailsWhenEmailAlreadyExists() {
+        createUser("dup@test.com", "User1");
+
+        UserDto dto = new UserDto();
+        dto.setName("User2");
+        dto.setEmail("dup@test.com");
+
+        assertThrows(IllegalStateException.class,
+                () -> userService.createUser(dto));
+    }
+
+    @Test
+    void getUserByIdThrowsWhenNotFound() {
+        assertThrows(NoSuchElementException.class,
+                () -> userService.getUserById(999L));
+    }
+
+    @Test
+    void updateUserFailsWhenEmailAlreadyUsedByAnotherUser() {
+        User u1 = createUser("first@test.com", "First");
+        createUser("second@test.com", "Second");
+
+        UserDto dto = new UserDto();
+        dto.setEmail("second@test.com");
+
+        assertThrows(IllegalStateException.class,
+                () -> userService.updateUser(u1.getId(), dto));
+    }
+
+    @Test
+    void deleteUserThrowsWhenNotFound() {
+        assertThrows(NoSuchElementException.class,
+                () -> userService.deleteUser(999L));
+    }
+
 }

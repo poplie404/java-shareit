@@ -86,7 +86,6 @@ class BookingServiceImplTest {
 
         bookingService.createBooking(dto, booker.getId());
 
-        // 👍 исправлено: добавлены from и size
         List<BookingResponseDto> bookings =
                 bookingService.getBookingsByUser(booker.getId(), "ALL", 0, 10);
 
@@ -94,21 +93,6 @@ class BookingServiceImplTest {
         assertEquals(1, bookings.size());
     }
 
-    private User createUser(String email, String name) {
-        User u = new User();
-        u.setEmail(email);
-        u.setName(name);
-        return userRepository.save(u);
-    }
-
-    private Item createItem(User owner, String name, boolean available) {
-        Item i = new Item();
-        i.setName(name);
-        i.setDescription("Description");
-        i.setAvailable(available);
-        i.setOwner(owner);
-        return itemRepository.save(i);
-    }
 
     @Test
     void createBookingFailsWhenItemNotAvailable() {
@@ -174,6 +158,39 @@ class BookingServiceImplTest {
 
         assertThrows(ru.practicum.shareit.exception.ForbiddenException.class,
                 () -> bookingService.getBooking(booking.getId(), stranger.getId()));
+    }
+
+    @Test
+    void getBookingsByUserWithUnknownStateThrows() {
+        User owner = createUser("owner@test.com", "Owner");
+        User booker = createUser("booker@test.com", "Booker");
+        Item item = createItem(owner, "Item", true);
+
+        BookingRequestDto dto = new BookingRequestDto();
+        dto.setItemId(item.getId());
+        dto.setStart(LocalDateTime.now().plusDays(1));
+        dto.setEnd(LocalDateTime.now().plusDays(2));
+        bookingService.createBooking(dto, booker.getId());
+
+        assertThrows(IllegalArgumentException.class,
+                () -> bookingService.getBookingsByUser(booker.getId(), "UNKNOWN", 0, 10));
+    }
+
+
+    private User createUser(String email, String name) {
+        User u = new User();
+        u.setEmail(email);
+        u.setName(name);
+        return userRepository.save(u);
+    }
+
+    private Item createItem(User owner, String name, boolean available) {
+        Item i = new Item();
+        i.setName(name);
+        i.setDescription("Description");
+        i.setAvailable(available);
+        i.setOwner(owner);
+        return itemRepository.save(i);
     }
 
 }

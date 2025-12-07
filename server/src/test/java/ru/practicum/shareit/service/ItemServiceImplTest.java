@@ -10,6 +10,7 @@ import ru.practicum.shareit.entity.Item;
 import ru.practicum.shareit.entity.User;
 import ru.practicum.shareit.repository.ItemRepository;
 import ru.practicum.shareit.repository.UserRepository;
+import java.util.NoSuchElementException;
 
 import java.util.List;
 
@@ -117,6 +118,54 @@ class ItemServiceImplTest {
         assertThrows(ru.practicum.shareit.exception.ForbiddenException.class,
                 () -> itemService.updateItem(item.getId(), update, other.getId()));
     }
+
+    @Test
+    void createItemFailsWhenOwnerNotFound() {
+        ItemDto dto = new ItemDto();
+        dto.setName("Item");
+        dto.setDescription("Desc");
+        dto.setAvailable(true);
+
+        assertThrows(NoSuchElementException.class,
+                () -> itemService.createItem(dto, 999L));
+    }
+
+    @Test
+    void updateItemFailsWhenItemNotFound() {
+        ItemDto dto = new ItemDto();
+        dto.setName("New name");
+
+        assertThrows(NoSuchElementException.class,
+                () -> itemService.updateItem(999L, dto, 1L));
+    }
+
+    @Test
+    void updateItemOnlyAvailability() {
+        User owner = createUser("owner2@test.com", "Owner2");
+        Item item = createItem(owner, "Name", false);
+
+        ItemDto dto = new ItemDto();
+        dto.setAvailable(true);
+
+        ItemDto updated = itemService.updateItem(item.getId(), dto, owner.getId());
+
+        assertTrue(updated.getAvailable());
+        assertEquals("Name", updated.getName());
+    }
+
+    @Test
+    void getItemByIdForNonOwnerDoesNotContainBookings() {
+        User owner = createUser("owner3@test.com", "Owner3");
+        User other = createUser("other3@test.com", "Other3");
+        Item item = createItem(owner, "Item", true);
+
+        ItemDto dto = itemService.getItemById(item.getId(), other.getId());
+
+        assertEquals(item.getId(), dto.getId());
+        assertNull(dto.getLastBooking());
+        assertNull(dto.getNextBooking());
+    }
+
 
     private User createUser(String email, String name) {
         User user = new User();
