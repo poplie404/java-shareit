@@ -90,4 +90,29 @@ class UserControllerTest {
         mockMvc.perform(delete("/users/1"))
                 .andExpect(status().isOk());
     }
+    // ✅ getUserById NotFound (НЕ покрыто!)
+    @Test
+    void getUserByIdNotFound() throws Exception {
+        when(userService.getUserById(eq(999L)))
+                .thenThrow(new ru.practicum.shareit.exception.NotFoundException("User not found"));
+
+        mockMvc.perform(get("/users/999"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void createUserDuplicateEmail() throws Exception {
+        UserDto dto = new UserDto();
+        dto.setName("Dup");
+        dto.setEmail("dup@test.com");
+
+        when(userService.createUser(any(UserDto.class)))
+                .thenThrow(new IllegalStateException("Email already exists"));
+
+        mockMvc.perform(post("/users")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dto)))
+                .andExpect(status().isConflict());
+    }
+
 }

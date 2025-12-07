@@ -112,5 +112,46 @@ class BookingControllerTest {
                 .andExpect(jsonPath("$[0].id").value(1));
     }
 
+    @Test
+    void approveBookingRejectedSuccess() throws Exception {
+        BookingResponseDto responseDto = new BookingResponseDto();
+        responseDto.setId(1L);
+        responseDto.setStatus(BookingStatus.REJECTED);
+        when(bookingService.approveBooking(eq(1L), eq(1L), eq(false))).thenReturn(responseDto);
+
+        mockMvc.perform(patch("/bookings/1")
+                        .header("X-Sharer-User-Id", 1L)
+                        .param("approved", "false"))  // ← false НЕ тестировался
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("REJECTED"));
+    }
+
+    @Test
+    void getUserBookingsDefaultParams() throws Exception {
+        BookingResponseDto b1 = new BookingResponseDto();
+        b1.setId(1L);
+
+        when(bookingService.getBookingsByUser(eq(1L), eq("ALL"), eq(0), eq(10)))
+                .thenReturn(List.of(b1));
+
+        mockMvc.perform(get("/bookings")  // ← БЕЗ параметров!
+                        .header("X-Sharer-User-Id", 1L))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value(1));
+    }
+
+    @Test
+    void getOwnerBookingsDefaultParams() throws Exception {
+        BookingResponseDto b1 = new BookingResponseDto();
+        b1.setId(1L);
+
+        when(bookingService.getBookingsByOwner(eq(1L), eq("ALL"), eq(0), eq(10)))
+                .thenReturn(List.of(b1));
+
+        mockMvc.perform(get("/bookings/owner")  // ← БЕЗ параметров!
+                        .header("X-Sharer-User-Id", 1L))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value(1));
+    }
 
 }

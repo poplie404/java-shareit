@@ -161,8 +161,23 @@ class ItemControllerTest {
 
         mockMvc.perform(get("/items/999")
                         .header("X-Sharer-User-Id", 1L))
-                .andExpect(status().isNotFound())  // ✅ 404 вместо 400
+                .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.error").value("Item not found"));
+    }
+
+    @Test
+    void updateItemNotOwnerForbidden() throws Exception {
+        ItemDto dto = new ItemDto();
+        dto.setName("Hack");
+
+        Mockito.doThrow(new ru.practicum.shareit.exception.ForbiddenException("Not owner"))
+                .when(itemService).updateItem(eq(1L), any(ItemDto.class), eq(999L));
+
+        mockMvc.perform(patch("/items/1")
+                        .header("X-Sharer-User-Id", 999L)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dto)))
+                .andExpect(status().isForbidden());
     }
 
 }
