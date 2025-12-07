@@ -18,38 +18,51 @@ public class ItemController {
     private final ItemService itemService;
 
     @PostMapping
-    public Item createItem(@Valid @RequestBody ItemDto dto,
-                           @RequestHeader("X-Sharer-User-Id") Long ownerId) {
+    public ItemDto createItem(@Valid @RequestBody ItemDto dto,
+                              @RequestHeader("X-Sharer-User-Id") Long ownerId) {
         Item item = itemService.createItem(dto, ownerId);
-        log.info("Добавлена вещь {} владельцем ID={}", item.getName(), ownerId);
-        return item;
+        return ItemMapper.toItemDto(item);
     }
 
     @PatchMapping("/{itemId}")
-    public Item updateItem(@PathVariable Long itemId,
-                           @RequestBody ItemDto dto,
-                           @RequestHeader("X-Sharer-User-Id") Long ownerId) {
+    public ItemDto updateItem(@PathVariable Long itemId,
+                              @RequestBody ItemDto dto,
+                              @RequestHeader("X-Sharer-User-Id") Long ownerId) {
         Item updated = itemService.updateItem(itemId, dto, ownerId);
-        log.info("Обновлена вещь ID={} пользователем ID={}", itemId, ownerId);
-        return updated;
+        return ItemMapper.toItemDto(updated);
     }
 
     @GetMapping("/{itemId}")
-    public Item getItemById(@PathVariable Long itemId) {
-        log.info("Получен запрос на получение вещи ID={}", itemId);
-        return itemService.getItemById(itemId);
+    public ItemDto getItemById(
+            @PathVariable Long itemId,
+            @RequestHeader("X-Sharer-User-Id") Long userId
+    ) {
+        return itemService.getItemById(itemId, userId);
     }
+
+
 
     @GetMapping
-    public Collection<Item> getItemsByOwner(@RequestHeader("X-Sharer-User-Id") Long ownerId) {
+    public Collection<ItemDto> getItemsByOwner(
+            @RequestHeader("X-Sharer-User-Id") Long ownerId
+    ) {
         List<Item> items = itemService.getItemsByOwner(ownerId);
-        log.info("Получен список из {} вещей владельца ID={}", items.size(), ownerId);
-        return items;
+        return items.stream()
+                .map(ItemMapper::toItemDto)
+                .toList();
     }
 
+
+
     @GetMapping("/search")
-    public List<Item> searchItems(@RequestParam String text) {
-        log.info("Поиск вещей по запросу: '{}'", text);
-        return itemService.search(text);
+    public List<ItemDto> search(
+            @RequestParam String text
+    ) {
+        List<Item> items = itemService.search(text);
+
+        return items.stream()
+                .map(ItemMapper::toItemDto)
+                .toList();
     }
+
 }

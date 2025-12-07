@@ -1,29 +1,52 @@
 package ru.practicum.shareit.item;
 
+import ru.practicum.shareit.item.comment.CommentDto;
+
+import java.util.List;
+
 public class ItemMapper {
+
     public static ItemDto toItemDto(Item item) {
-        if (item == null) {
-            return null;
-        }
         ItemDto dto = new ItemDto();
         dto.setId(item.getId());
+        dto.setName(item.getName());
         dto.setDescription(item.getDescription());
         dto.setAvailable(item.getAvailable());
+
+        dto.setLastBooking(null);
+        dto.setNextBooking(null);
+        dto.setComments(List.of());
+
+        return dto;
+    }
+
+    public static ItemDto toItemDto(Item item,
+                                    Object lastBooking,
+                                    Object nextBooking,
+                                    List<CommentDto> comments) {
+
+        ItemDto dto = new ItemDto();
+        dto.setId(item.getId());
         dto.setName(item.getName());
-        dto.setUserId(item.getUserId());
+        dto.setDescription(item.getDescription());
+        dto.setAvailable(item.getAvailable());
+
+        dto.setLastBooking(lastBooking);
+        dto.setNextBooking(nextBooking);
+        dto.setComments(comments);
+
         return dto;
     }
 
     public static Item toItem(ItemDto dto) {
-        if (dto == null) {
-            return null;
-        }
+        if (dto == null) return null;
+
         Item item = new Item();
         item.setId(dto.getId());
         item.setDescription(dto.getDescription());
         item.setAvailable(dto.getAvailable());
         item.setName(dto.getName());
-        item.setUserId(dto.getUserId());
+
         return item;
     }
 }

@@ -2,66 +2,110 @@ package ru.practicum.shareit.item;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import ru.practicum.shareit.booking.Booking;
+import ru.practicum.shareit.booking.BookingRepository;
+import ru.practicum.shareit.booking.BookingServiceImpl;
 import ru.practicum.shareit.exception.ForbiddenException;
+import ru.practicum.shareit.item.comment.CommentDto;
+import ru.practicum.shareit.item.comment.CommentMapper;
+import ru.practicum.shareit.item.comment.CommentRepository;
+import ru.practicum.shareit.user.UserRepository;
 import ru.practicum.shareit.user.UserService;
+import ru.practicum.shareit.user.User;
 
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicLong;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.NoSuchElementException;
 
 @Service
 @RequiredArgsConstructor
 public class ItemServiceImpl implements ItemService {
 
     private final UserService userService;
-    private final Map<Long, Item> items = new ConcurrentHashMap<>();
-    private final AtomicLong idGenerator = new AtomicLong(0);
+    private final ItemRepository itemRepository;
+    private final CommentRepository commentRepository;
+    private final UserRepository userRepository;
+    private final BookingRepository bookingRepository;
+    private final BookingServiceImpl bookingService;
 
     @Override
     public Item createItem(ItemDto dto, Long ownerId) {
-        userService.getUserById(ownerId);
 
-        Long id = idGenerator.incrementAndGet();
-        dto.setId(id);
-        dto.setUserId(ownerId);
+        User owner = userRepository.findById(ownerId)
+                .orElseThrow(() -> new NoSuchElementException("Пользователь не найден"));
 
         Item item = ItemMapper.toItem(dto);
-        items.put(id, item);
+        item.setOwner(owner);
 
-        return item;
+        return itemRepository.save(item);
     }
 
     @Override
     public Item updateItem(Long itemId, ItemDto dto, Long ownerId) {
-        Item existing = items.get(itemId);
-        if (existing == null) {
-            throw new NoSuchElementException("Вещь с id " + itemId + " не найдена");
-        }
-        if (!Objects.equals(existing.getUserId(), ownerId)) {
-            throw new ForbiddenException("Редактировать вещь может только владелец");
+
+        userService.getUserById(ownerId);
+
+        Item existing = itemRepository.findById(itemId)
+                .orElseThrow(() ->
+                        new NoSuchElementException("Вещь с id " + itemId + " не найдена"));
+
+        if (!existing.getOwner().getId().equals(ownerId)) {
+            throw new ForbiddenException("Редактировать вещь может только её владелец");
         }
 
         if (dto.getName() != null) existing.setName(dto.getName());
         if (dto.getDescription() != null) existing.setDescription(dto.getDescription());
         if (dto.getAvailable() != null) existing.setAvailable(dto.getAvailable());
 
-        items.put(itemId, existing);
-        return existing;
+        return itemRepository.save(existing);
     }
 
     @Override
-    public Item getItemById(Long itemId) {
-        if (!items.containsKey(itemId)) {
-            throw new NoSuchElementException("Вещь с id " + itemId + " не найдена");
+    public ItemDto getItemById(Long itemId, Long userId) {
+
+        Item item = itemRepository.findById(itemId)
+                .orElseThrow(() -> new NoSuchElementException("Вещь не найдена"));
+
+        List<CommentDto> comments = commentRepository.findAllByItemId(itemId).stream()
+                .map(CommentMapper::toCommentDto)
+                .toList();
+
+        Object lastBooking = null;
+        Object nextBooking = null;
+
+        if (item.getOwner().getId().equals(userId)) {
+
+            Booking last = bookingService.findLastBooking(itemId);
+            Booking next = bookingService.findNextBooking(itemId);
+
+            if (last != null) {
+                lastBooking = Map.of(
+                        "id", last.getId(),
+                        "bookerId", last.getBooker().getId()
+                );
+            }
+
+            if (next != null) {
+                nextBooking = Map.of(
+                        "id", next.getId(),
+                        "bookerId", next.getBooker().getId()
+                );
+            }
         }
-        return items.get(itemId);
+
+        return ItemMapper.toItemDto(
+                item,
+                lastBooking,
+                nextBooking,
+                comments
+        );
     }
+
 
     @Override
     public List<Item> getItemsByOwner(Long ownerId) {
-        return items.values().stream()
-                .filter(item -> Objects.equals(item.getUserId(), ownerId))
-                .toList();
+        return itemRepository.findAllByOwnerId(ownerId);
     }
 
     @Override
@@ -69,13 +113,8 @@ public class ItemServiceImpl implements ItemService {
         if (text == null || text.isBlank()) {
             return Collections.emptyList();
         }
-        String query = text.toLowerCase();
-        return items.values().stream()
-                .filter(Item::getAvailable)
-                .filter(item ->
-                        (item.getName() != null && item.getName().toLowerCase().contains(query)) ||
-                                (item.getDescription() != null && item.getDescription().toLowerCase().contains(query))
-                )
-                .toList();
+        return itemRepository.search(text.toLowerCase());
     }
 }
+
+
