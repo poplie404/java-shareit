@@ -166,6 +166,17 @@ class ItemServiceImplTest {
         assertNull(dto.getNextBooking());
     }
 
+    @Test
+    void searchWithNullReturnsEmpty() {
+        List<ItemDto> result = itemService.search(null);
+        assertTrue(result.isEmpty());
+    }
+
+    @Test
+    void searchWithWhitespaceOnlyReturnsEmpty() {
+        List<ItemDto> result = itemService.search("   ");
+        assertTrue(result.isEmpty());
+    }
 
     private User createUser(String email, String name) {
         User user = new User();

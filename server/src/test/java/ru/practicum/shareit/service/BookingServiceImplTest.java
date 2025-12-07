@@ -7,6 +7,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 import ru.practicum.shareit.dto.booking.BookingRequestDto;
 import ru.practicum.shareit.dto.booking.BookingResponseDto;
+import ru.practicum.shareit.entity.Booking;
 import ru.practicum.shareit.entity.BookingStatus;
 import ru.practicum.shareit.entity.Item;
 import ru.practicum.shareit.entity.User;
@@ -176,22 +177,139 @@ class BookingServiceImplTest {
                 () -> bookingService.getBookingsByUser(booker.getId(), "UNKNOWN", 0, 10));
     }
 
+
     @Test
-    void getBookingsByUserUnknownStateThrows() {
+    void getBookingsByUserFutureState() {
         User owner = createUser("owner2@test.com", "Owner2");
         User booker = createUser("booker2@test.com", "Booker2");
-        Item item = createItem(owner, "Item", true);
+        Item item = createItem(owner, "Test Item", true);
+
+        // FUTURE: start > now
+        BookingRequestDto dtoFuture = new BookingRequestDto();
+        dtoFuture.setItemId(item.getId());
+        dtoFuture.setStart(LocalDateTime.now().plusDays(1));
+        dtoFuture.setEnd(LocalDateTime.now().plusDays(2));
+        bookingService.createBooking(dtoFuture, booker.getId());
+
+        List<BookingResponseDto> bookings = bookingService.getBookingsByUser(booker.getId(), "FUTURE", 0, 10);
+        assertEquals(1, bookings.size());
+    }
+
+    @Test
+    void getBookingsByUserCurrentState() {
+        User owner = createUser("owner3@test.com", "Owner3");
+        User booker = createUser("booker3@test.com", "Booker3");
+        Item item = createItem(owner, "Test Item", true);
+
+        Booking booking = new Booking();
+        booking.setItem(item);
+        booking.setBooker(booker);
+        booking.setStart(LocalDateTime.now().minusHours(1));  // start < now
+        booking.setEnd(LocalDateTime.now().plusHours(1));     // end > now
+        booking.setStatus(BookingStatus.APPROVED);            // approved для CURRENT
+        bookingRepository.save(booking);
+
+        List<BookingResponseDto> bookings = bookingService.getBookingsByUser(booker.getId(), "CURRENT", 0, 10);
+        assertEquals(1, bookings.size());
+    }
+
+
+    @Test
+    void getBookingsByUserWaitingState() {
+        User owner = createUser("owner4@test.com", "Owner4");
+        User booker = createUser("booker4@test.com", "Booker4");
+        Item item = createItem(owner, "Test Item", true);
+
+        // WAITING: статус WAITING
+        BookingRequestDto dtoWaiting = new BookingRequestDto();
+        dtoWaiting.setItemId(item.getId());
+        dtoWaiting.setStart(LocalDateTime.now().plusDays(1));
+        dtoWaiting.setEnd(LocalDateTime.now().plusDays(2));
+        BookingResponseDto booking = bookingService.createBooking(dtoWaiting, booker.getId());
+
+        // approveBooking меняет статус на APPROVED, поэтому оставляем WAITING
+        // или создать напрямую через репозиторий с WAITING
+
+        List<BookingResponseDto> bookings = bookingService.getBookingsByUser(booker.getId(), "WAITING", 0, 10);
+        assertEquals(1, bookings.size());
+        assertEquals(BookingStatus.WAITING, bookings.get(0).getStatus());
+    }
+
+    @Test
+    void getBookingsByUserRejectedState() {
+        User owner = createUser("owner5@test.com", "Owner5");
+        User booker = createUser("booker5@test.com", "Booker5");
+        Item item = createItem(owner, "Test Item", true);
 
         BookingRequestDto dto = new BookingRequestDto();
         dto.setItemId(item.getId());
         dto.setStart(LocalDateTime.now().plusDays(1));
         dto.setEnd(LocalDateTime.now().plusDays(2));
-        bookingService.createBooking(dto, booker.getId());
+        BookingResponseDto booking = bookingService.createBooking(dto, booker.getId());
+
+        // REJECTED: approve с false
+        bookingService.approveBooking(booking.getId(), owner.getId(), false);
+
+        List<BookingResponseDto> bookings = bookingService.getBookingsByUser(booker.getId(), "REJECTED", 0, 10);
+        assertEquals(1, bookings.size());
+        assertEquals(BookingStatus.REJECTED, bookings.get(0).getStatus());
+    }
+
+    @Test
+    void getBookingsByUserUnknownState() {
+        User booker = createUser("booker@test.com", "Booker");
 
         assertThrows(IllegalArgumentException.class,
                 () -> bookingService.getBookingsByUser(booker.getId(), "UNKNOWN", 0, 10));
     }
 
+    @Test
+    void getBookingsByUserWithPagination() {
+        User owner = createUser("owner@test.com", "Owner");
+        User booker = createUser("booker@test.com", "Booker");
+        Item item = createItem(owner, "Item", true);
+
+        for (int i = 1; i <= 3; i++) {
+            BookingRequestDto dto = new BookingRequestDto();
+            dto.setItemId(item.getId());
+            dto.setStart(LocalDateTime.now().plusDays(i));
+            dto.setEnd(LocalDateTime.now().plusDays(i + 1));
+            bookingService.createBooking(dto, booker.getId());
+        }
+
+        List<BookingResponseDto> firstPage = bookingService.getBookingsByUser(booker.getId(), "ALL", 1, 1);
+        assertEquals(1, firstPage.size());
+    }
+
+    @Test
+    void getBookingNotFound() {
+        assertThrows(ru.practicum.shareit.exception.NotFoundException.class,
+                () -> bookingService.getBooking(999L, 1L));
+    }
+
+    @Test
+    void approveBookingNotFound() {
+        assertThrows(ru.practicum.shareit.exception.NotFoundException.class,
+                () -> bookingService.approveBooking(999L, 1L, true));
+    }
+
+    @Test
+    void approveBookingFailsWhenNotWaiting() {
+        User owner = createUser("owner@test.com", "Owner");
+        User booker = createUser("booker@test.com", "Booker");
+        Item item = createItem(owner, "Test Item", true);
+
+        BookingRequestDto dto = new BookingRequestDto();
+        dto.setItemId(item.getId());
+        dto.setStart(LocalDateTime.now().plusDays(1));
+        dto.setEnd(LocalDateTime.now().plusDays(2));
+        BookingResponseDto booking = bookingService.createBooking(dto, booker.getId());
+
+        bookingService.approveBooking(booking.getId(), owner.getId(), true);
+
+        assertThrows(IllegalArgumentException.class,
+                () -> bookingService.approveBooking(booking.getId(), owner.getId(), false));
+    }
 
     private User createUser(String email, String name) {
         User u = new User();

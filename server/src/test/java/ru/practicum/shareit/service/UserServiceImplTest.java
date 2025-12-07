@@ -5,6 +5,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
+import ru.practicum.shareit.dto.item.ItemDto;
 import ru.practicum.shareit.dto.user.UserDto;
 import ru.practicum.shareit.entity.User;
 import ru.practicum.shareit.repository.UserRepository;
@@ -108,5 +109,26 @@ class UserServiceImplTest {
         assertThrows(NoSuchElementException.class,
                 () -> userService.deleteUser(999L));
     }
+
+
+    @Test
+    void getUserByIdNotFound() {
+        assertThrows(NoSuchElementException.class,
+                () -> userService.getUserById(999L));
+    }
+
+    @Test
+    void updateUserItemNotFound() {
+        UserDto dto = new UserDto();
+        assertThrows(NoSuchElementException.class,
+                () -> userService.updateUser(999L, dto));
+    }
+
+    @Test
+    void deleteUserNotFound() {
+        assertThrows(NoSuchElementException.class,
+                () -> userService.deleteUser(999L));
+    }
+
 
 }
