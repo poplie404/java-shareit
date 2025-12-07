@@ -109,4 +109,71 @@ class BookingServiceImplTest {
         i.setOwner(owner);
         return itemRepository.save(i);
     }
+
+    @Test
+    void createBookingFailsWhenItemNotAvailable() {
+        User owner = createUser("owner@test.com", "Owner");
+        User booker = createUser("booker@test.com", "Booker");
+        Item item = createItem(owner, "Test Item", false); // available = false
+
+        BookingRequestDto dto = new BookingRequestDto();
+        dto.setItemId(item.getId());
+        dto.setStart(LocalDateTime.now().plusDays(1));
+        dto.setEnd(LocalDateTime.now().plusDays(2));
+
+        assertThrows(IllegalArgumentException.class,
+                () -> bookingService.createBooking(dto, booker.getId()));
+    }
+
+    @Test
+    void createBookingFailsWhenStartInPast() {
+        User owner = createUser("owner@test.com", "Owner");
+        User booker = createUser("booker@test.com", "Booker");
+        Item item = createItem(owner, "Test Item", true);
+
+        BookingRequestDto dto = new BookingRequestDto();
+        dto.setItemId(item.getId());
+        dto.setStart(LocalDateTime.now().minusHours(1));
+        dto.setEnd(LocalDateTime.now().plusHours(1));
+
+        assertThrows(IllegalArgumentException.class,
+                () -> bookingService.createBooking(dto, booker.getId()));
+    }
+
+    @Test
+    void approveBookingFailsWhenNotOwner() {
+        User owner = createUser("owner@test.com", "Owner");
+        User other = createUser("other@test.com", "Other");
+        User booker = createUser("booker@test.com", "Booker");
+        Item item = createItem(owner, "Test Item", true);
+
+        BookingRequestDto dto = new BookingRequestDto();
+        dto.setItemId(item.getId());
+        dto.setStart(LocalDateTime.now().plusDays(1));
+        dto.setEnd(LocalDateTime.now().plusDays(2));
+
+        BookingResponseDto booking = bookingService.createBooking(dto, booker.getId());
+
+        assertThrows(ru.practicum.shareit.exception.ForbiddenException.class,
+                () -> bookingService.approveBooking(booking.getId(), other.getId(), true));
+    }
+
+    @Test
+    void getBookingFailsWhenNoAccess() {
+        User owner = createUser("owner@test.com", "Owner");
+        User booker = createUser("booker@test.com", "Booker");
+        User stranger = createUser("stranger@test.com", "Stranger");
+        Item item = createItem(owner, "Test Item", true);
+
+        BookingRequestDto dto = new BookingRequestDto();
+        dto.setItemId(item.getId());
+        dto.setStart(LocalDateTime.now().plusDays(1));
+        dto.setEnd(LocalDateTime.now().plusDays(2));
+
+        BookingResponseDto booking = bookingService.createBooking(dto, booker.getId());
+
+        assertThrows(ru.practicum.shareit.exception.ForbiddenException.class,
+                () -> bookingService.getBooking(booking.getId(), stranger.getId()));
+    }
+
 }

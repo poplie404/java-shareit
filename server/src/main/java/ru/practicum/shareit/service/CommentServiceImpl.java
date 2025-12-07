@@ -40,7 +40,6 @@ public class CommentServiceImpl implements CommentService {
             throw new IllegalArgumentException("Оставить комментарий может только тот, кто брал вещь");
         }
 
-        // Используем исправленный маппер
         Comment comment = CommentMapper.toComment(commentDto, item, user);
         Comment saved = commentRepository.save(comment);
 

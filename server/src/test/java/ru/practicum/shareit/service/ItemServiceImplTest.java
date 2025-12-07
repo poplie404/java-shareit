@@ -105,6 +105,18 @@ class ItemServiceImplTest {
         assertTrue(updated.getAvailable()); // старое значение не было изменено
     }
 
+    @Test
+    void updateItemFailsForNonOwner() {
+        User owner = createUser("owner@test.com", "Owner");
+        User other = createUser("other@test.com", "Other");
+        Item item = createItem(owner, "Item", true);
+
+        ItemDto update = new ItemDto();
+        update.setName("New Name");
+
+        assertThrows(ru.practicum.shareit.exception.ForbiddenException.class,
+                () -> itemService.updateItem(item.getId(), update, other.getId()));
+    }
 
     private User createUser(String email, String name) {
         User user = new User();
