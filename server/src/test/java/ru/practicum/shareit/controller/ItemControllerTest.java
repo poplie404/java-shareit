@@ -118,4 +118,41 @@ class ItemControllerTest {
                 .andExpect(jsonPath("$[0].name").value("Super Drill"));
     }
 
+    @Test
+    void shouldUpdateItemSuccessfully() throws Exception {
+        ItemDto request = new ItemDto();
+        request.setName("Updated name");
+        request.setDescription("Updated description");
+
+        ItemDto response = new ItemDto();
+        response.setId(1L);
+        response.setName("Updated name");
+        response.setDescription("Updated description");
+        response.setAvailable(true);
+
+        Mockito.when(itemService.updateItem(eq(1L), any(ItemDto.class), eq(5L)))
+                .thenReturn(response);
+
+        mockMvc.perform(patch("/items/1")
+                        .header("X-Sharer-User-Id", 5L)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(1))
+                .andExpect(jsonPath("$.name").value("Updated name"))
+                .andExpect(jsonPath("$.description").value("Updated description"));
+    }
+
+    @Test
+    void shouldSearchItemsWhenTextIsBlank() throws Exception {
+        Mockito.when(itemService.search(eq("")))
+                .thenReturn(List.of());
+
+        mockMvc.perform(get("/items/search")
+                        .param("text", ""))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(0));
+    }
+
+
 }

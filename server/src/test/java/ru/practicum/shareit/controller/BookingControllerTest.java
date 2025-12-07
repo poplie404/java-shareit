@@ -12,6 +12,8 @@ import ru.practicum.shareit.dto.booking.BookingResponseDto;
 import ru.practicum.shareit.entity.BookingStatus;
 import ru.practicum.shareit.service.BookingService;
 import java.time.LocalDateTime;
+import java.util.List;
+
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
@@ -67,5 +69,48 @@ class BookingControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(1));
     }
+
+    @Test
+    void getUserBookingsSuccess() throws Exception {
+        BookingResponseDto b1 = new BookingResponseDto();
+        b1.setId(1L);
+        b1.setStatus(BookingStatus.WAITING);
+        BookingResponseDto b2 = new BookingResponseDto();
+        b2.setId(2L);
+        b2.setStatus(BookingStatus.APPROVED);
+
+        when(bookingService.getBookingsByUser(1L, "CURRENT", 5, 20))
+                .thenReturn(List.of(b1, b2));
+
+        mockMvc.perform(get("/bookings")
+                        .header("X-Sharer-User-Id", 1L)
+                        .param("state", "CURRENT")
+                        .param("from", "5")
+                        .param("size", "20"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(2))
+                .andExpect(jsonPath("$[0].id").value(1))
+                .andExpect(jsonPath("$[1].id").value(2));
+    }
+
+    @Test
+    void getOwnerBookingsSuccess() throws Exception {
+        BookingResponseDto b1 = new BookingResponseDto();
+        b1.setId(1L);
+        b1.setStatus(BookingStatus.WAITING);
+
+        when(bookingService.getBookingsByOwner(2L, "ALL", 0, 10))
+                .thenReturn(List.of(b1));
+
+        mockMvc.perform(get("/bookings/owner")
+                        .header("X-Sharer-User-Id", 2L)
+                        .param("state", "ALL")
+                        .param("from", "0")
+                        .param("size", "10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].id").value(1));
+    }
+
 
 }

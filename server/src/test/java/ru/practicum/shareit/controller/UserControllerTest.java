@@ -84,4 +84,10 @@ class UserControllerTest {
                 .andExpect(jsonPath("$.id").value(1))
                 .andExpect(jsonPath("$.name").value("Updated Name"));
     }
+
+    @Test
+    void deleteUserSuccess() throws Exception {
+        mockMvc.perform(delete("/users/1"))
+                .andExpect(status().isOk());
+    }
 }

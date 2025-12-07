@@ -176,6 +176,22 @@ class BookingServiceImplTest {
                 () -> bookingService.getBookingsByUser(booker.getId(), "UNKNOWN", 0, 10));
     }
 
+    @Test
+    void getBookingsByUserUnknownStateThrows() {
+        User owner = createUser("owner2@test.com", "Owner2");
+        User booker = createUser("booker2@test.com", "Booker2");
+        Item item = createItem(owner, "Item", true);
+
+        BookingRequestDto dto = new BookingRequestDto();
+        dto.setItemId(item.getId());
+        dto.setStart(LocalDateTime.now().plusDays(1));
+        dto.setEnd(LocalDateTime.now().plusDays(2));
+        bookingService.createBooking(dto, booker.getId());
+
+        assertThrows(IllegalArgumentException.class,
+                () -> bookingService.getBookingsByUser(booker.getId(), "UNKNOWN", 0, 10));
+    }
+
 
     private User createUser(String email, String name) {
         User u = new User();

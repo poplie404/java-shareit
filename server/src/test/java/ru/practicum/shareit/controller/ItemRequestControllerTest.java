@@ -94,4 +94,25 @@ class ItemRequestControllerTest {
                 .andExpect(jsonPath("$.id").value(1))
                 .andExpect(jsonPath("$.description").value("Specific request"));
     }
+
+    @Test
+    void getAllItemRequestsWithCustomPagination() throws Exception {
+        ItemRequestDto request = ItemRequestDto.builder()
+                .id(10L)
+                .description("Paginated request")
+                .created(LocalDateTime.now())
+                .build();
+
+        when(itemRequestService.getAll(eq(1L), eq(5), eq(2)))
+                .thenReturn(List.of(request));
+
+        mockMvc.perform(get("/requests/all")
+                        .header("X-Sharer-User-Id", 1L)
+                        .param("from", "5")
+                        .param("size", "2"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value(10))
+                .andExpect(jsonPath("$[0].description").value("Paginated request"));
+    }
+
 }
