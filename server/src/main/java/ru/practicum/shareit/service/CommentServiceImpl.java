@@ -23,6 +23,7 @@ public class CommentServiceImpl implements CommentService {
     private final UserRepository userRepository;
     private final ItemRepository itemRepository;
     private final BookingRepository bookingRepository;
+    private final CommentMapper commentMapper;
 
     @Override
     public CommentDto addComment(Long userId, Long itemId, CommentDto commentDto) {
@@ -40,17 +41,17 @@ public class CommentServiceImpl implements CommentService {
             throw new IllegalArgumentException("Оставить комментарий может только тот, кто брал вещь");
         }
 
-        Comment comment = CommentMapper.toComment(commentDto, item, user);
+        Comment comment = commentMapper.toComment(commentDto, item, user);
         Comment saved = commentRepository.save(comment);
 
-        return CommentMapper.toCommentDto(saved);
+        return commentMapper.toCommentDto(saved);
     }
 
     @Override
     public List<CommentDto> getCommentsByItem(Long itemId) {
         List<Comment> comments = commentRepository.findAllByItemId(itemId);
         return comments.stream()
-                .map(CommentMapper::toCommentDto)
+                .map(commentMapper::toCommentDto)
                 .toList();
     }
 }

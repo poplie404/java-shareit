@@ -9,6 +9,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.util.DefaultUriBuilderFactory;
 import ru.practicum.shareit.client.BaseClient;
 
+import java.util.List;
+
 @Service
 public class UserClient extends BaseClient {
     private static final String API_PREFIX = "/users";
@@ -22,24 +24,23 @@ public class UserClient extends BaseClient {
                 .build());
     }
 
-    public ResponseEntity<Object> createUser(Object body) {
-        return post("", body);
+    public ResponseEntity<UserDto> createUser(UserDto body) {
+        return postTyped("", null, body, UserDto.class);
     }
 
-    public ResponseEntity<Object> updateUser(long userId, Object body) {
-        return patch("/" + userId, body);
+    public ResponseEntity<UserDto> updateUser(long userId, UserDto body) {
+        return patchTyped("/" + userId, null, body, UserDto.class);
     }
 
-    public ResponseEntity<Object> getUser(long id) {
-        return get("/" + id);
+    public ResponseEntity<UserDto> getUser(long id) {
+        return getTyped("/" + id, null, UserDto.class);
     }
 
-    public ResponseEntity<Object> getAllUsers() {
-        return get("");
+    public ResponseEntity<List<UserDto>> getAllUsers() {
+        return getListTyped("", null, UserDto.class);
     }
 
     public ResponseEntity<Object> deleteUser(long id) {
         return delete("/" + id);
     }
 }
-

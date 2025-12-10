@@ -23,7 +23,6 @@ public class ErrorHandler {
         return Map.of("error", e.getMessage());
     }
 
-    // НОВОЕ: точная обработка статусов, проброшенных из сервисов
     @ExceptionHandler(ResponseStatusException.class)
     public ResponseEntity<Map<String, String>> handleResponseStatus(ResponseStatusException e) {
         HttpStatus status = HttpStatus.resolve(e.getStatusCode().value());
@@ -36,10 +35,4 @@ public class ErrorHandler {
                 .body(Map.of("error", message));
     }
 
-    // ВРЕМЕННО: либо совсем убери, либо оставь только для отладки
-    // @ExceptionHandler(RuntimeException.class)
-    // @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
-    // public Map<String, String> handleServerError(RuntimeException e) {
-    //     return Map.of("error", e.getMessage());
-    // }
 }

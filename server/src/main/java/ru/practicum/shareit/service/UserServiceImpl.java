@@ -14,13 +14,14 @@ import java.util.NoSuchElementException;
 @RequiredArgsConstructor
 public class UserServiceImpl implements UserService {
 
+    private final UserMapper userMapper;
     private final UserRepository userRepository;
 
     @Override
     public List<UserDto> getAllUsers() {
         return userRepository.findAll()
                 .stream()
-                .map(UserMapper::toUserDto)
+                .map(userMapper::toUserDto)
                 .toList();
     }
 
@@ -28,7 +29,7 @@ public class UserServiceImpl implements UserService {
     public UserDto getUserById(Long id) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new NoSuchElementException("Пользователь с id " + id + " не найден"));
-        return UserMapper.toUserDto(user);
+        return userMapper.toUserDto(user);
     }
 
     @Override
@@ -37,9 +38,9 @@ public class UserServiceImpl implements UserService {
             throw new IllegalStateException("Пользователь с таким email уже существует: " + dto.getEmail());
         }
 
-        User user = UserMapper.toUser(dto);
+        User user = userMapper.toUser(dto);
         User saved = userRepository.save(user);
-        return UserMapper.toUserDto(saved);
+        return userMapper.toUserDto(saved);
     }
 
     @Override
@@ -60,7 +61,7 @@ public class UserServiceImpl implements UserService {
         }
 
         User saved = userRepository.save(existing);
-        return UserMapper.toUserDto(saved);
+        return userMapper.toUserDto(saved);
     }
 
     @Override

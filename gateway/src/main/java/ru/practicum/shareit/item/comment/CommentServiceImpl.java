@@ -1,7 +1,7 @@
 package ru.practicum.shareit.item.comment;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -10,19 +10,18 @@ import org.springframework.web.server.ResponseStatusException;
 public class CommentServiceImpl implements CommentService {
 
     private final CommentClient commentClient;
-    private final ObjectMapper mapper;
 
     @Override
     public CommentDto addComment(Long userId, Long itemId, CommentDto dto) {
-        var response = commentClient.createComment(userId, itemId, dto);
+        ResponseEntity<CommentDto> response = commentClient.createComment(userId, itemId, dto);
 
-        if (response.getStatusCode().is2xxSuccessful()) {
-            return mapper.convertValue(response.getBody(), CommentDto.class);
+        if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+            return response.getBody();
         }
 
         throw new ResponseStatusException(
                 response.getStatusCode(),
-                response.getBody() != null ? response.getBody().toString() : null
+                response.getBody() != null ? response.getBody().toString() : "Failed to create comment"
         );
     }
 }

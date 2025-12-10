@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.util.DefaultUriBuilderFactory;
 import ru.practicum.shareit.client.BaseClient;
 
+import java.util.List;
 import java.util.Map;
 
 @Service
@@ -24,23 +25,20 @@ public class ItemRequestClient extends BaseClient {
                 .build());
     }
 
-    public ResponseEntity<Object> createRequest(long userId, Object body) {
-        return post("", userId, body);
+    public ResponseEntity<ItemRequestDto> createRequest(long userId, ItemRequestCreateDto body) {
+        return postTyped("", userId, body, ItemRequestDto.class);
     }
 
-    public ResponseEntity<Object> getOwnRequests(long userId) {
-        return get("", userId);
+    public ResponseEntity<List<ItemRequestDto>> getOwnRequests(long userId) {
+        return getListTyped("", userId, ItemRequestDto.class);
     }
 
-    public ResponseEntity<Object> getAllRequests(long userId, Integer from, Integer size) {
-        Map<String, Object> params = Map.of(
-                "from", from,
-                "size", size
-        );
-        return get("/all?from={from}&size={size}", userId, params);
+    public ResponseEntity<List<ItemRequestDto>> getAllRequests(long userId, Integer from, Integer size) {
+        Map<String, Object> params = Map.of("from", from, "size", size);
+        return getListTyped("/all?from={from}&size={size}", userId, params, ItemRequestDto.class);
     }
 
-    public ResponseEntity<Object> getRequest(long userId, long requestId) {
-        return get("/" + requestId, userId);
+    public ResponseEntity<ItemRequestDto> getRequest(long userId, long requestId) {
+        return getTyped("/" + requestId, userId, ItemRequestDto.class);
     }
 }

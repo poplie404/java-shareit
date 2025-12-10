@@ -7,7 +7,7 @@ import ru.practicum.shareit.entity.User;
 @Component
 public class UserMapper {
 
-    public static UserDto toUserDto(User user) {
+    public UserDto toUserDto(User user) {
         if (user == null) {
             return null;
         }
@@ -19,7 +19,7 @@ public class UserMapper {
         return dto;
     }
 
-    public static User toUser(UserDto dto) {
+    public User toUser(UserDto dto) {
         if (dto == null) return null;
 
         User user = new User();

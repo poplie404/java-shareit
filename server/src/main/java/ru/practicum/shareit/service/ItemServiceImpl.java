@@ -26,6 +26,8 @@ public class ItemServiceImpl implements ItemService {
     private final CommentRepository commentRepository;
     private final ItemRequestRepository requestRepository;
     private final BookingServiceImpl bookingService;
+    private final ItemMapper itemMapper;
+    private final CommentMapper commentMapper;
 
     @Override
     public ItemDto createItem(ItemDto dto, Long ownerId) {
@@ -39,12 +41,12 @@ public class ItemServiceImpl implements ItemService {
                     .orElseThrow(() -> new NoSuchElementException("Запрос не найден"));
         }
 
-        Item item = ItemMapper.toItem(dto, request);
+        Item item = itemMapper.toItem(dto, request);
         item.setOwner(owner);
 
         item = itemRepository.save(item);
 
-        return ItemMapper.toItemDto(item);
+        return itemMapper.toItemDto(item);
     }
 
     @Override
@@ -61,7 +63,7 @@ public class ItemServiceImpl implements ItemService {
         if (dto.getAvailable() != null) existing.setAvailable(dto.getAvailable());
 
         existing = itemRepository.save(existing);
-        return ItemMapper.toItemDto(existing);
+        return itemMapper.toItemDto(existing);
     }
 
     @Override
@@ -70,7 +72,7 @@ public class ItemServiceImpl implements ItemService {
                 .orElseThrow(() -> new NoSuchElementException("Вещь не найдена"));
 
         List<CommentDto> comments = commentRepository.findAllByItemId(itemId).stream()
-                .map(CommentMapper::toCommentDto)
+                .map(commentMapper::toCommentDto)
                 .toList();
 
         Object lastBooking = null;
@@ -87,7 +89,7 @@ public class ItemServiceImpl implements ItemService {
                 nextBooking = Map.of("id", next.getId(), "bookerId", next.getBooker().getId());
         }
 
-        return ItemMapper.toItemDto(item, lastBooking, nextBooking, comments);
+        return itemMapper.toItemDto(item, lastBooking, nextBooking, comments);
     }
 
     @Override
@@ -95,7 +97,7 @@ public class ItemServiceImpl implements ItemService {
         return itemRepository.findAllByOwnerId(ownerId).stream()
                 .map(item -> {
                     List<CommentDto> comments = commentRepository.findAllByItemId(item.getId()).stream()
-                            .map(CommentMapper::toCommentDto)
+                            .map(commentMapper::toCommentDto)
                             .toList();
 
                     Booking last = bookingService.findLastBooking(item.getId());
@@ -107,7 +109,7 @@ public class ItemServiceImpl implements ItemService {
                     Object nextBooking = next == null ? null :
                             Map.of("id", next.getId(), "bookerId", next.getBooker().getId());
 
-                    return ItemMapper.toItemDto(item, lastBooking, nextBooking, comments);
+                    return itemMapper.toItemDto(item, lastBooking, nextBooking, comments);
                 })
                 .toList();
     }
@@ -118,7 +120,7 @@ public class ItemServiceImpl implements ItemService {
             return List.of();
 
         return itemRepository.search(text).stream()
-                .map(ItemMapper::toItemDto)
+                .map(itemMapper::toItemDto)
                 .toList();
     }
 }

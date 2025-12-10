@@ -11,7 +11,7 @@ import java.util.List;
 @Component
 public class ItemMapper {
 
-    public static ItemDto toItemDto(Item item) {
+    public ItemDto toItemDto(Item item) {
         ItemDto dto = new ItemDto();
         dto.setId(item.getId());
         dto.setName(item.getName());
@@ -21,7 +21,7 @@ public class ItemMapper {
         return dto;
     }
 
-    public static ItemDto toItemDto(Item item,
+    public ItemDto toItemDto(Item item,
                                     Object lastBooking,
                                     Object nextBooking,
                                     List<CommentDto> comments) {
@@ -38,7 +38,7 @@ public class ItemMapper {
         return dto;
     }
 
-    public static Item toItem(ItemDto dto, ItemRequest request) {
+    public Item toItem(ItemDto dto, ItemRequest request) {
         Item item = new Item();
         item.setId(dto.getId());
         item.setName(dto.getName());

@@ -22,7 +22,7 @@ public class CommentClient extends BaseClient {
                 .build());
     }
 
-    public ResponseEntity<Object> createComment(long userId, long itemId, Object body) {
-        return post("/" + itemId + "/comment", userId, body);
+    public ResponseEntity<CommentDto> createComment(long userId, long itemId, CommentDto body) {
+        return postTyped("/" + itemId + "/comment", userId, body, CommentDto.class);
     }
 }
